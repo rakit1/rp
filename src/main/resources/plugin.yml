@@ -10,9 +10,6 @@ commands:
   lmenu:
     description: Открывает меню лидера фракции.
     usage: /<command>
-  faction:
-    description: Команды для взаимодействия с фракцией.
-    usage: /<command> accept
 permissions:
   rp.admin.makeleader:
     description: Позволяет использовать /makeleader.

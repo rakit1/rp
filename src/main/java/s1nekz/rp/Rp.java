@@ -1,11 +1,11 @@
 package s1nekz.rp;
 
 import org.bukkit.plugin.java.JavaPlugin;
-import s1nekz.rp.commands.FactionUserCommand;
 import s1nekz.rp.commands.LeaderCommands;
 import s1nekz.rp.listeners.GuiListener;
 import s1nekz.rp.listeners.PlayerInteractionListener;
 import s1nekz.rp.managers.FactionManager;
+import s1nekz.rp.managers.GuiManager;
 import s1nekz.rp.managers.PlayerStateManager;
 
 public final class Rp extends JavaPlugin {
@@ -26,9 +26,6 @@ public final class Rp extends JavaPlugin {
         LeaderCommands leaderCommands = new LeaderCommands(factionManager, guiManager);
         getCommand("makeleader").setExecutor(leaderCommands);
         getCommand("lmenu").setExecutor(leaderCommands);
-
-        // Новая команда для игроков
-        getCommand("faction").setExecutor(new FactionUserCommand(factionManager));
 
         // Регистрация слушателей событий
         GuiListener guiListener = new GuiListener(factionManager, stateManager, guiManager);

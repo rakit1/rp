@@ -7,6 +7,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import s1nekz.rp.managers.FactionManager;
+import s1nekz.rp.managers.GuiManager;
 import s1nekz.rp.managers.PlayerStateManager;
 
 public class PlayerInteractionListener implements Listener {
@@ -30,14 +31,12 @@ public class PlayerInteractionListener implements Listener {
         if (interactor.isSneaking()) {
             event.setCancelled(true);
             Player target = (Player) event.getRightClicked();
-            // Вся логика открытия меню теперь в GuiManager
             guiManager.openInteractionMenu(interactor, target);
         }
     }
 
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
-        // Если игрок в наручниках, отменяем его движение
         if (stateManager.isCuffed(event.getPlayer())) {
             if (event.getFrom().getBlockX() != event.getTo().getBlockX() || event.getFrom().getBlockZ() != event.getTo().getBlockZ()) {
                 event.setTo(event.getFrom());

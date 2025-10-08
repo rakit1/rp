@@ -1,6 +1,7 @@
 package s1nekz.rp.commands;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -8,6 +9,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import s1nekz.rp.managers.FactionManager;
 import s1nekz.rp.managers.FactionManager.Faction;
+import s1nekz.rp.managers.GuiManager;
 
 public class LeaderCommands implements CommandExecutor {
 
@@ -36,9 +38,17 @@ public class LeaderCommands implements CommandExecutor {
         if (remove) {
             faction.setLeader(null);
             sender.sendMessage("§aВы сняли " + target.getName() + " с поста лидера " + faction.getName() + ".");
+            // --- ДОБАВЛЕНО СООБЩЕНИЕ ИГРОКУ ---
+            if (target.isOnline()) {
+                ((Player) target).sendMessage(ChatColor.RED + "Вы были сняты с поста лидера фракции " + faction.getName() + ".");
+            }
         } else {
             faction.setLeader(target.getUniqueId());
             sender.sendMessage("§aВы назначили " + target.getName() + " лидером фракции " + faction.getName() + ".");
+            // --- ДОБАВЛЕНО СООБЩЕНИЕ ИГРОКУ ---
+            if (target.isOnline()) {
+                ((Player) target).sendMessage(ChatColor.GREEN + "Вас назначили лидером фракции " + faction.getName() + "!");
+            }
         }
         factionManager.saveFactions();
         return true;
