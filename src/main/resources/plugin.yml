@@ -1,0 +1,19 @@
+name: rp
+version: '1.0'
+main: s1nekz.rp.Rp
+api-version: '1.21'
+commands:
+  makeleader:
+    description: Назначает или снимает лидера фракции.
+    usage: /<command> <игрок> <фракция> [remove]
+    permission: rp.admin.makeleader
+  lmenu:
+    description: Открывает меню лидера фракции.
+    usage: /<command>
+  faction:
+    description: Команды для взаимодействия с фракцией.
+    usage: /<command> accept
+permissions:
+  rp.admin.makeleader:
+    description: Позволяет использовать /makeleader.
+    default: op
