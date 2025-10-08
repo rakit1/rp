@@ -29,59 +29,53 @@ public class FactionManager {
     }
 
     private void createDefaultFactions() {
-        List<String> ranks = Arrays.asList("Ранг 1", "Ранг 2", "Ранг 3", "Ранг 4", "Ранг 5");
-        createFactionSection("fbi", "ФБР", ranks);
-        createFactionSection("police", "Полиция", ranks);
-        createFactionSection("mafia", "Мафия", ranks);
-        createFactionSection("government", "Правительство", ranks);
+        List<String> ranks = Arrays.asList("Стажёр", "Агент", "Спецагент", "Зам. Главы", "Глава Отдела");
+        int leaderRankIndex = ranks.size();
 
-        // Устанавливаем права по умолчанию для ФБР
-        int leaderRankIndex = 5; // Индекс лидера (количество рангов)
-        factionsConfig.set("factions.fbi.permissions.cuff", 2); // с 3-го ранга
-        factionsConfig.set("factions.fbi.permissions.search", 2);
-        factionsConfig.set("factions.fbi.permissions.follow", 3);
-        factionsConfig.set("factions.fbi.permissions.fire_gov", 4);   // Увольнение госс. с 5-го ранга
-        factionsConfig.set("factions.fbi.permissions.warn_gov", 3);   // Выговор госс. с 4-го ранга
-        factionsConfig.set("factions.fbi.permissions.invite", leaderRankIndex); // Приглашать может только лидер
-        factionsConfig.set("factions.fbi.permissions.warn", leaderRankIndex);   // Выдавать выговоры своим может только лидер
+        Map<String, Integer> defaultPerms = new HashMap<>();
+        defaultPerms.put("invite", leaderRankIndex);
+        defaultPerms.put("warn_own", leaderRankIndex);
+
+        Map<String, Integer> fbiPerms = new HashMap<>(defaultPerms);
+        fbiPerms.put("cuff", 2);
+        fbiPerms.put("search", 2);
+        fbiPerms.put("follow", 3);
+        fbiPerms.put("fire_gov", 4);
+        fbiPerms.put("warn_gov", 3);
+
+        createFactionSection("fbi", "ФБР", ranks, fbiPerms);
+        createFactionSection("police", "Полиция", ranks, defaultPerms);
+        createFactionSection("mafia", "Мафия", ranks, defaultPerms);
+        createFactionSection("government", "Правительство", ranks, defaultPerms);
         saveConfig();
     }
 
-    /**
-     * Универсальная проверка прав для лидера/сотрудника ФБР.
-     * @param uuid UUID игрока
-     * @param action Ключ права (например, "cuff", "invite", "fire_gov")
-     * @return true, если у игрока есть право
-     */
     public boolean canPerformAction(UUID uuid, String action) {
         Faction f = getPlayerFaction(uuid);
         if (f == null) return false;
 
-        // Лидер любой фракции может управлять своими (если не указано иное в правах)
         boolean isLeader = f.getLeader() != null && f.getLeader().equals(uuid);
-        if (isLeader && (action.equals("promote") || action.equals("demote") || action.equals("fire"))) {
+        if (isLeader && (action.equals("promote") || action.equals("demote") || action.equals("fire_own"))) {
             return true;
         }
 
-        // Для ФБР проверяем конкретные права
-        if (f.getId().equalsIgnoreCase("fbi")) {
-            // Ранг лидера равен количеству обычных рангов
-            int requiredRank = f.getPermissions().getOrDefault(action, f.getRanks().size()); // По умолч. - только лидер
-            return f.getRank(uuid) >= requiredRank;
+        // Права, эксклюзивные для ФБР
+        if (!f.getId().equalsIgnoreCase("fbi") && (action.equals("cuff") || action.equals("search") || action.equals("follow") || action.equals("warn_gov") || action.equals("fire_gov"))) {
+            return false;
         }
 
-        // Для других фракций пока можно добавить аналогичные проверки
-        return false;
+        int requiredRank = f.getPermissions().getOrDefault(action, f.getRanks().size());
+        return f.getRank(uuid) >= requiredRank;
     }
 
     public boolean isGovernmentFaction(Faction faction) {
         return faction != null && governmentFactionIds.contains(faction.getId().toLowerCase());
     }
 
-    // (Остальные методы без критических изменений, предоставлены для полноты)
+    public Collection<Faction> getAllFactions() { return factions.values(); }
     public void loadFactions() { factionsFile = new File(plugin.getDataFolder(), "factions.yml"); if (!factionsFile.exists()) plugin.saveResource("factions.yml", false); factionsConfig = YamlConfiguration.loadConfiguration(factionsFile); factions.clear(); ConfigurationSection factionsSection = factionsConfig.getConfigurationSection("factions"); if (factionsSection == null) { createDefaultFactions(); factionsSection = factionsConfig.getConfigurationSection("factions"); } for (String factionId : factionsSection.getKeys(false)) { ConfigurationSection data = factionsSection.getConfigurationSection(factionId); if (data != null) { Map<UUID, Integer> members = new HashMap<>(), warnings = new HashMap<>(); Map<String, Integer> permissions = new HashMap<>(); ConfigurationSection membersSection = data.getConfigurationSection("members"); if (membersSection != null) membersSection.getValues(false).forEach((k, v) -> members.put(UUID.fromString(k), (Integer) v)); ConfigurationSection warningsSection = data.getConfigurationSection("warnings"); if (warningsSection != null) warningsSection.getValues(false).forEach((k, v) -> warnings.put(UUID.fromString(k), (Integer) v)); ConfigurationSection permissionsSection = data.getConfigurationSection("permissions"); if (permissionsSection != null) permissionsSection.getValues(false).forEach((k, v) -> permissions.put(k, (Integer) v)); factions.put(factionId.toLowerCase(), new Faction(factionId, data.getString("name"), data.getString("leader") != null ? UUID.fromString(data.getString("leader")) : null, data.getString("leaderRankName", "Лидер"), members, data.getStringList("ranks"), permissions, warnings)); } } }
     public void saveFactions() { for (Map.Entry<String, Faction> entry : factions.entrySet()) { String path = "factions." + entry.getKey() + "."; Faction f = entry.getValue(); factionsConfig.set(path + "name", f.getName()); factionsConfig.set(path + "leader", f.getLeader() != null ? f.getLeader().toString() : null); factionsConfig.set(path + "leaderRankName", f.getLeaderRankName()); factionsConfig.set(path + "ranks", f.getRanks()); Map<String, Integer> members = new HashMap<>(), warnings = new HashMap<>(); f.getMembers().forEach((k, v) -> members.put(k.toString(), v)); f.getWarningsMap().forEach((k, v) -> warnings.put(k.toString(), v)); factionsConfig.set(path + "members", members); factionsConfig.set(path + "warnings", warnings); factionsConfig.set(path + "permissions", f.getPermissions()); } saveConfig(); }
-    private void createFactionSection(String id, String name, List<String> ranks) { String path = "factions." + id + "."; factionsConfig.set(path + "name", name); factionsConfig.set(path + "leader", null); factionsConfig.set(path + "leaderRankName", "Лидер"); factionsConfig.set(path + "ranks", ranks); factionsConfig.set(path + "members", new HashMap<>()); factionsConfig.set(path + "permissions", new HashMap<>()); factionsConfig.set(path + "warnings", new HashMap<>()); }
+    private void createFactionSection(String id, String name, List<String> ranks, Map<String, Integer> perms) { String path = "factions." + id + "."; factionsConfig.set(path + "name", name); factionsConfig.set(path + "leader", null); factionsConfig.set(path + "leaderRankName", "Лидер"); factionsConfig.set(path + "ranks", ranks); factionsConfig.set(path + "members", new HashMap<>()); factionsConfig.set(path + "warnings", new HashMap<>()); factionsConfig.set(path + "permissions", perms); }
     private void saveConfig() { try { factionsConfig.save(factionsFile); } catch (IOException e) { e.printStackTrace(); } }
     public Faction getFaction(String id) { return factions.get(id.toLowerCase()); }
     public Faction getPlayerFaction(UUID uuid) { return factions.values().stream().filter(f -> f.isMember(uuid)).findFirst().orElse(null); }

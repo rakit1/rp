@@ -8,7 +8,6 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import s1nekz.rp.managers.FactionManager;
-import s1nekz.rp.managers.FactionManager.Faction;
 import s1nekz.rp.managers.GuiManager;
 
 public class LeaderCommands implements CommandExecutor {
@@ -23,42 +22,38 @@ public class LeaderCommands implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (command.getName().equalsIgnoreCase("makeleader")) return handleMakeLeader(sender, args);
-        if (command.getName().equalsIgnoreCase("lmenu")) return handleLeaderMenu(sender);
-        return false;
-    }
-
-    private boolean handleMakeLeader(CommandSender sender, String[] args) {
-        if (args.length < 2) { sender.sendMessage("§eИспользование: /makeleader <игрок> <фракция> [remove]"); return true; }
-        OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
-        Faction faction = factionManager.getFaction(args[1]);
-        if (faction == null) { sender.sendMessage("§cФракция '" + args[1] + "' не найдена."); return true; }
-
-        boolean remove = args.length > 2 && args[2].equalsIgnoreCase("remove");
-        if (remove) {
-            faction.setLeader(null);
-            sender.sendMessage("§aВы сняли " + target.getName() + " с поста лидера " + faction.getName() + ".");
-            // --- ДОБАВЛЕНО СООБЩЕНИЕ ИГРОКУ ---
-            if (target.isOnline()) {
-                ((Player) target).sendMessage(ChatColor.RED + "Вы были сняты с поста лидера фракции " + faction.getName() + ".");
-            }
-        } else {
-            faction.setLeader(target.getUniqueId());
-            sender.sendMessage("§aВы назначили " + target.getName() + " лидером фракции " + faction.getName() + ".");
-            // --- ДОБАВЛЕНО СООБЩЕНИЕ ИГРОКУ ---
-            if (target.isOnline()) {
-                ((Player) target).sendMessage(ChatColor.GREEN + "Вас назначили лидером фракции " + faction.getName() + "!");
-            }
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("§cТолько для игроков.");
+            return true;
         }
-        factionManager.saveFactions();
-        return true;
-    }
 
-    private boolean handleLeaderMenu(CommandSender sender) {
-        if (!(sender instanceof Player player)) { sender.sendMessage("§cТолько для игроков."); return true; }
-        Faction faction = factionManager.getLeaderFaction(player.getUniqueId());
-        if (faction == null) { player.sendMessage("§cВы не являетесь лидером фракции."); return true; }
-        guiManager.openLeaderMenu(player, faction);
-        return true;
+        if (command.getName().equalsIgnoreCase("makeleader")) {
+            if (!player.hasPermission("rp.admin.makeleader")) {
+                player.sendMessage(ChatColor.RED + "У вас нет прав.");
+                return true;
+            }
+            if (args.length < 1) {
+                player.sendMessage("§eИспользование: /makeleader <игрок>");
+                return true;
+            }
+            OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
+            if (!target.hasPlayedBefore() && !target.isOnline()) {
+                player.sendMessage(ChatColor.RED + "Игрок '" + args[0] + "' никогда не играл на сервере.");
+                return true;
+            }
+            guiManager.openMakeLeaderMenu(player, target);
+            return true;
+        }
+
+        if (command.getName().equalsIgnoreCase("lmenu")) {
+            FactionManager.Faction faction = factionManager.getLeaderFaction(player.getUniqueId());
+            if (faction == null) {
+                player.sendMessage("§cВы не являетесь лидером фракции.");
+                return true;
+            }
+            guiManager.openLeaderMenu(player, faction);
+            return true;
+        }
+        return false;
     }
 }
